@@ -1,0 +1,6 @@
+{
+  "brains": {
+    "light":  {"url": "http://localhost:8080/v1/chat/completions", "model": "local-small", "max_tokens": 120, "timeout": 20},
+    "strong": {"url": "https://api.example.com/v1/chat/completions", "model": "hosted-model", "key_env": "STRONG_API_KEY", "max_tokens_key": "max_completion_tokens", "max_tokens": 400, "timeout": 25}
+  }
+}
