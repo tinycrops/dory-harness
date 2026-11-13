@@ -28,3 +28,21 @@ class T(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "s.json"; self.assertEqual(len(checklist.new_problems(r, p, now.date())), 1); self.assertEqual(len(checklist.new_problems(r, p, now.date())), 0)
 if __name__ == "__main__": unittest.main()
+
+class DiscordLogTests(unittest.TestCase):
+    def test_delivery_is_proven_by_message_id(self):
+        import http.server, threading, os, json
+        from dory_harness import discordlog
+        seen = []
+        class S(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a): pass
+            def do_POST(self):
+                n = int(self.headers["Content-Length"]); seen.append((self.path, self.rfile.read(n)))
+                b = json.dumps(dict(id="123", channel_id="9")).encode(); self.send_response(200); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
+        srv = http.server.HTTPServer(("127.0.0.1", 0), S); threading.Thread(target=srv.serve_forever, daemon=True).start()
+        os.environ["DISCORD_WEBHOOK"] = f"http://127.0.0.1:{srv.server_port}/hook"
+        m = discordlog.post("hello @everyone", block=True)
+        self.assertEqual(m["id"], "123"); self.assertIn("wait=true", seen[0][0]); self.assertIn(b'"parse": []', seen[0][1])   # mentions off
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "a.txt"; f.write_text("x"); self.assertEqual(discordlog.post_file(f, "file", block=True)["channel_id"], "9")
+        srv.shutdown(); del os.environ["DISCORD_WEBHOOK"]
